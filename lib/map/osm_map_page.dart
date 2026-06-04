@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
 import '../widgets/attribution_badge.dart';
+import '../widgets/location_debug_bar.dart';
 import '../widgets/three_d_toggle.dart';
+import '../widgets/user_location_marker.dart';
 import 'map_style.dart';
-import 'user_location_layer.dart';
+import 'user_location_service.dart';
 
 /// Full-screen MapLibre map with OSM tiles and Mapterhorn relief.
 class OsmMapPage extends StatefulWidget {
@@ -32,16 +34,64 @@ class _OsmMapPageState extends State<OsmMapPage> {
   Completer<void>? _styleLoadCompleter;
   int _styleLoadGeneration = 0;
 
-  late final UserLocationLayer _userLocation = UserLocationLayer(
+  late final UserLocationService _userLocation = UserLocationService(
     onPermissionDenied: _onLocationPermissionDenied,
   );
+
+  Offset? _markerScreenPoint;
+
+  @override
+  void initState() {
+    super.initState();
+    _userLocation.addListener(_onUserLocationChanged);
+  }
+
+  void _onUserLocationChanged() {
+    unawaited(_updateMarkerScreenPoint());
+    setState(() {});
+  }
+
+  Future<void> _updateMarkerScreenPoint() async {
+    final controller = _controller;
+    final position = _userLocation.position;
+    if (controller == null || position == null) {
+      if (_markerScreenPoint != null && mounted) {
+        setState(() => _markerScreenPoint = null);
+      }
+      return;
+    }
+
+    try {
+      final point = await controller.toScreenLocation(
+        LatLng(position.latitude, position.longitude),
+      );
+      if (!mounted) return;
+      setState(
+        () =>
+            _markerScreenPoint = Offset(point.x.toDouble(), point.y.toDouble()),
+      );
+    } on Object catch (error, stackTrace) {
+      developer.log(
+        'toScreenLocation failed',
+        name: 'mc_flutter.map',
+        level: 900,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+  }
 
   void _onStyleLoaded() {
     final completer = _styleLoadCompleter;
     if (completer != null && !completer.isCompleted) {
       completer.complete();
     }
-    unawaited(_userLocation.onStyleLoaded());
+    unawaited(_userLocation.start());
+    unawaited(_updateMarkerScreenPoint());
+  }
+
+  void _onCameraMove(CameraPosition _) {
+    unawaited(_updateMarkerScreenPoint());
   }
 
   void _onLocationPermissionDenied() {
@@ -58,6 +108,7 @@ class _OsmMapPageState extends State<OsmMapPage> {
 
   @override
   void dispose() {
+    _userLocation.removeListener(_onUserLocationChanged);
     _userLocation.dispose();
     super.dispose();
   }
@@ -134,6 +185,7 @@ class _OsmMapPageState extends State<OsmMapPage> {
   @override
   Widget build(BuildContext context) {
     final topInset = MediaQuery.paddingOf(context).top;
+    final mapBearing = _controller?.cameraPosition?.bearing ?? 0;
 
     return Scaffold(
       body: Stack(
@@ -143,9 +195,9 @@ class _OsmMapPageState extends State<OsmMapPage> {
             initialCameraPosition: _initialCamera,
             onMapCreated: (controller) {
               _controller = controller;
-              _userLocation.attach(controller);
             },
             onStyleLoadedCallback: _onStyleLoaded,
+            onCameraMove: _onCameraMove,
             trackCameraPosition: true,
             compassEnabled: true,
             compassViewPosition: CompassViewPosition.topRight,
@@ -154,6 +206,11 @@ class _OsmMapPageState extends State<OsmMapPage> {
             zoomGesturesEnabled: true,
             tiltGesturesEnabled: true,
             attributionButtonPosition: AttributionButtonPosition.bottomLeft,
+          ),
+          UserLocationMarker(
+            screenPoint: _markerScreenPoint,
+            bearingDegrees: _userLocation.bearing,
+            mapBearingDegrees: mapBearing,
           ),
           Positioned(
             top: topInset + 52,
@@ -168,6 +225,16 @@ class _OsmMapPageState extends State<OsmMapPage> {
             child: Padding(
               padding: EdgeInsets.all(8),
               child: AttributionBadge(),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: LocationDebugBar(
+              status: _userLocation.status,
+              position: _userLocation.position,
+              screenPoint: _markerScreenPoint,
             ),
           ),
         ],
