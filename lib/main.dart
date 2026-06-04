@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
+import 'map_style.dart';
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const McFlutterApp());
@@ -13,25 +15,18 @@ class McFlutterApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return const MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: HillshadeOsmMapPage(),
+      home: OsmMapPage(),
     );
   }
 }
 
-/// Full-screen MapLibre map with OpenStreetMap raster tiles and DEM hillshading.
-class HillshadeOsmMapPage extends StatefulWidget {
-  const HillshadeOsmMapPage({super.key});
+/// Full-screen MapLibre map with OpenStreetMap raster tiles.
+class OsmMapPage extends StatelessWidget {
+  const OsmMapPage({super.key});
 
-  @override
-  State<HillshadeOsmMapPage> createState() => _HillshadeOsmMapPageState();
-}
-
-class _HillshadeOsmMapPageState extends State<HillshadeOsmMapPage> {
   static const _initialCamera = CameraPosition(
     target: LatLng(46.82, 8.23),
     zoom: 9,
-    bearing: 0,
-    tilt: 0,
   );
 
   @override
@@ -40,7 +35,7 @@ class _HillshadeOsmMapPageState extends State<HillshadeOsmMapPage> {
       body: Stack(
         children: [
           MapLibreMap(
-            styleString: 'assets/map_style.json',
+            styleString: mapStyleString,
             initialCameraPosition: _initialCamera,
             compassEnabled: true,
             rotateGesturesEnabled: true,
@@ -80,7 +75,7 @@ class _AttributionBadge extends StatelessWidget {
       child: const Padding(
         padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         child: Text(
-          '© OpenStreetMap contributors · Terrain © MapLibre',
+          '© OpenStreetMap contributors',
           style: TextStyle(fontSize: 11, color: Color(0xFF333333)),
         ),
       ),

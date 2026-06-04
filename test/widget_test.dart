@@ -4,6 +4,6 @@ import 'package:mc_flutter/main.dart';
 void main() {
   testWidgets('app loads map page', (WidgetTester tester) async {
     await tester.pumpWidget(const McFlutterApp());
-    expect(find.byType(HillshadeOsmMapPage), findsOneWidget);
+    expect(find.byType(OsmMapPage), findsOneWidget);
   });
 }
