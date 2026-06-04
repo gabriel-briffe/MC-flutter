@@ -43,9 +43,13 @@ flutter build web
 
 Serve `build/web` with any static host.
 
-### GitHub Pages (automatic)
+### GitHub Pages (automatic, from `main`)
 
-On the first deploy, enable Pages once in the repo: **Settings → Pages → Build and deployment → Source: GitHub Actions**. After that, every push to `main` updates https://gabriel-briffe.github.io/MC-flutter/.
+Built files are published in the **`docs/`** folder on `main`. Enable once on GitHub:
+
+**Settings → Pages → Build and deployment → Deploy from a branch → Branch: `main` → Folder: `/docs` → Save**
+
+After that, pushes to `main` (except `docs/`‑only updates) rebuild the site via [GitHub Actions](.github/workflows/deploy-pages.yml).
 
 ## Map style
 
