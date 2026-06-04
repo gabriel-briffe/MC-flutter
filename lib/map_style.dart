@@ -1,23 +1,12 @@
 /// Mapterhorn DEM tileset (terrain + hillshade).
 const mapterhornTileJsonUrl = 'https://tiles.mapterhorn.com/tilejson.json';
 
-/// Builds the MapLibre style as inline JSON (required for Flutter web / Pages).
+/// Inline MapLibre style: OSM + Mapterhorn hillshade + 3D terrain.
 ///
-/// [terrain3d] adds the `terrain` and `sky` spec entries used for 3D relief.
-/// Hillshade from Mapterhorn is always drawn above the OSM raster layer.
-String buildMapStyle({required bool terrain3d}) {
-  final terrainBlock = terrain3d
-      ? '''
-  "terrain": {
-    "source": "mapterhorn-dem",
-    "exaggeration": 1
-  },
-  "sky": {}'''
-      : '';
-
-  final terrainComma = terrain3d ? ',' : '';
-
-  return '''
+/// Terrain and hillshade are always in the style; the UI "3D" control only
+/// changes camera pitch (MapLibre GL JS on web does not support toggling
+/// terrain via [MapLibreMapController.setStyle] reliably).
+const String mapStyleString = '''
 {
   "version": 8,
   "name": "OSM + Mapterhorn",
@@ -31,7 +20,7 @@ String buildMapStyle({required bool terrain3d}) {
     },
     "mapterhorn-dem": {
       "type": "raster-dem",
-      "url": "$mapterhornTileJsonUrl"
+      "url": "https://tiles.mapterhorn.com/tilejson.json"
     }
   },
   "layers": [
@@ -48,11 +37,11 @@ String buildMapStyle({required bool terrain3d}) {
         "hillshade-shadow-color": "#473B24"
       }
     }
-  ]$terrainComma
-  $terrainBlock
+  ],
+  "terrain": {
+    "source": "mapterhorn-dem",
+    "exaggeration": 1
+  },
+  "sky": {}
 }
 ''';
-}
-
-/// Initial 2D view: OSM + hillshade, no 3D terrain mesh.
-String get mapStyleString => buildMapStyle(terrain3d: false);

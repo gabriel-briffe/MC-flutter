@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
@@ -20,7 +21,7 @@ class McFlutterApp extends StatelessWidget {
   }
 }
 
-/// Full-screen MapLibre map: OSM + Mapterhorn hillshade, optional 3D terrain.
+/// Full-screen MapLibre map: OSM + Mapterhorn hillshade, optional 3D view.
 class OsmMapPage extends StatefulWidget {
   const OsmMapPage({super.key});
 
@@ -31,7 +32,7 @@ class OsmMapPage extends StatefulWidget {
 class _OsmMapPageState extends State<OsmMapPage> {
   static const _initialCamera = CameraPosition(
     target: LatLng(46.82, 8.23),
-    zoom: 9,
+    zoom: 10,
   );
 
   static const _camera3d = (
@@ -43,39 +44,40 @@ class _OsmMapPageState extends State<OsmMapPage> {
   bool _is3d = false;
   bool _isToggling3d = false;
 
+  /// Toggles oblique 3D view by pitching the camera. Terrain stays loaded in the
+  /// style; we do not call [MapLibreMapController.setStyle] (broken/slow on web)
+  /// or [MapLibreMapController.queryCameraPosition] (unimplemented on web).
   Future<void> _toggle3d() async {
     final controller = _controller;
     if (controller == null || _isToggling3d) return;
 
     setState(() => _isToggling3d = true);
-
     final enable3d = !_is3d;
-    final camera = await controller.queryCameraPosition();
 
     try {
-      await controller.setStyle(buildMapStyle(terrain3d: enable3d));
-
-      if (camera != null) {
+      if (enable3d) {
+        await controller.animateCamera(CameraUpdate.tiltTo(_camera3d.tilt));
         await controller.animateCamera(
-          CameraUpdate.newCameraPosition(
-            CameraPosition(
-              target: camera.target,
-              zoom: camera.zoom,
-              bearing: enable3d ? _camera3d.bearing : 0,
-              tilt: enable3d ? _camera3d.tilt : 0,
-            ),
-          ),
-        );
-      } else if (enable3d) {
-        await controller.animateCamera(
-          CameraUpdate.tiltTo(_camera3d.tilt),
+          CameraUpdate.bearingTo(_camera3d.bearing),
         );
       } else {
         await controller.animateCamera(CameraUpdate.tiltTo(0));
+        await controller.animateCamera(CameraUpdate.bearingTo(0));
       }
-
       if (mounted) {
         setState(() => _is3d = enable3d);
+      }
+    } catch (e, stack) {
+      if (kDebugMode) {
+        debugPrint('3D toggle failed: $e\n$stack');
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not switch 3D view. Try zooming in closer.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -95,6 +97,7 @@ class _OsmMapPageState extends State<OsmMapPage> {
             styleString: mapStyleString,
             initialCameraPosition: _initialCamera,
             onMapCreated: (controller) => _controller = controller,
+            trackCameraPosition: true,
             compassEnabled: true,
             compassViewPosition: CompassViewPosition.topRight,
             rotateGesturesEnabled: true,
