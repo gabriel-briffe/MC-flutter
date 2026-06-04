@@ -28,10 +28,5 @@
         "hillshade-shadow-color": "#473B24"
       }
     }
-  ],
-  "terrain": {
-    "source": "mapterhorn-dem",
-    "exaggeration": 1
-  },
-  "sky": {}
+  ]
 }
