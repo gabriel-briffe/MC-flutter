@@ -63,7 +63,18 @@ Initial view is centered on the Swiss Alps so terrain is easy to see. Pan and zo
 ## Project layout
 
 ```
-lib/main.dart           # App entry + MapLibreMap widget
-assets/map_style.json   # MapLibre style (OSM raster + hillshade layer)
-web/index.html          # MapLibre GL JS script tags for web
+lib/main.dart              # Entry point
+lib/app.dart               # MaterialApp + theme
+lib/map/osm_map_page.dart  # Map screen + 3D toggle
+lib/map/map_style.dart     # Inline MapLibre style JSON
+lib/widgets/               # Attribution, 3D toggle
+assets/map_style.json      # Reference copy of style (not used on web)
+web/index.html             # MapLibre GL JS script tags for web
+docs/rules/rules.md        # Flutter AI / Dart guidelines (for Cursor & contributors)
 ```
+
+## Code guidelines
+
+This project follows the official [Flutter AI rules](docs/rules/rules.md)
+(from [flutter/flutter `docs/rules/rules.md`](https://github.com/flutter/flutter/blob/main/docs/rules/rules.md)).
+Cursor loads `.cursor/rules/flutter.mdc` when editing Dart files.

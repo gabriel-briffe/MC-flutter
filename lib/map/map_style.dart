@@ -1,12 +1,17 @@
-/// Mapterhorn DEM tileset (terrain + hillshade).
-const mapterhornTileJsonUrl = 'https://tiles.mapterhorn.com/tilejson.json';
+/// MapLibre style definitions for OSM and Mapterhorn terrain.
+library;
 
-/// Inline MapLibre style: OSM + Mapterhorn hillshade + 3D terrain.
+/// Mapterhorn DEM tileset (terrain + hillshade).
+const String mapterhornTileJsonUrl =
+    'https://tiles.mapterhorn.com/tilejson.json';
+
+/// Inline MapLibre style: OSM raster, Mapterhorn hillshade, and 3D terrain.
 ///
-/// Terrain and hillshade are always in the style; the UI "3D" control only
-/// changes camera pitch (MapLibre GL JS on web does not support toggling
-/// terrain via [MapLibreMapController.setStyle] reliably).
-const String mapStyleString = '''
+/// Inline JSON is required on Flutter web / GitHub Pages because
+/// [MapLibreMap.styleString] asset paths are not resolved through the Flutter
+/// asset bundle on web.
+const String mapStyleString =
+    '''
 {
   "version": 8,
   "name": "OSM + Mapterhorn",
@@ -20,7 +25,7 @@ const String mapStyleString = '''
     },
     "mapterhorn-dem": {
       "type": "raster-dem",
-      "url": "https://tiles.mapterhorn.com/tilejson.json"
+      "url": "$mapterhornTileJsonUrl"
     }
   },
   "layers": [

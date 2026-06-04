@@ -1,0 +1,27 @@
+---
+description: Flutter and Dart guidelines (official Flutter AI rules)
+globs:
+  - lib/**
+  - test/**
+  - pubspec.yaml
+  - analysis_options.yaml
+  - web/**
+alwaysApply: false
+---
+
+Follow the Flutter project's AI rules in `docs/rules/rules.md` (synced from
+https://github.com/flutter/flutter/blob/main/docs/rules/rules.md).
+
+For this repo specifically:
+
+- **Web / MapLibre:** Use inline MapLibre style JSON on web, not `assets/…`
+  paths for `styleString`.
+- **3D terrain:** Keep Mapterhorn terrain in the style; toggle 3D with camera
+  pitch only (avoid `setStyle` / `queryCameraPosition` on web).
+- **Navigation:** Single-screen map app — built-in `Navigator` / `MaterialApp`
+  home is sufficient; do not add `go_router` unless routing grows.
+- **State:** Local `StatefulWidget` state is appropriate; no extra state
+  packages unless requested.
+- **Logging:** Use `dart:developer` `log`, not `print` or `debugPrint`.
+- **Formatting:** 80-character line length; run `dart format` and
+  `flutter analyze` before committing.
