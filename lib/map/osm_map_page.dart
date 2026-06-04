@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer' as developer;
 
 import 'package:flutter/material.dart';
@@ -23,11 +24,54 @@ class _OsmMapPageState extends State<OsmMapPage> {
 
   static const _camera3d = (tilt: 60.0, bearing: -18.6);
 
+  static const _styleLoadTimeout = Duration(seconds: 30);
+
   MapLibreMapController? _controller;
   bool _is3d = false;
   bool _isToggling3d = false;
 
-  /// Pitches the camera for 3D; terrain stays in the style (web-safe).
+  Completer<void>? _styleLoadCompleter;
+  int _styleLoadGeneration = 0;
+
+  void _onStyleLoaded() {
+    final completer = _styleLoadCompleter;
+    if (completer != null && !completer.isCompleted) {
+      completer.complete();
+    }
+  }
+
+  /// Swaps the MapLibre style to include or omit 3D terrain.
+  Future<void> _applyTerrainStyle(bool terrain3d) async {
+    final controller = _controller;
+    if (controller == null) return;
+
+    final generation = ++_styleLoadGeneration;
+    final completer = Completer<void>();
+    _styleLoadCompleter = completer;
+
+    await controller.setStyle(buildMapStyle(terrain3d: terrain3d));
+
+    await completer.future.timeout(_styleLoadTimeout);
+
+    if (generation != _styleLoadGeneration) {
+      throw StateError('Style load superseded');
+    }
+  }
+
+  Future<void> _animate3dCamera({required bool enable3d}) async {
+    final controller = _controller;
+    if (controller == null) return;
+
+    if (enable3d) {
+      await controller.animateCamera(CameraUpdate.tiltTo(_camera3d.tilt));
+      await controller.animateCamera(CameraUpdate.bearingTo(_camera3d.bearing));
+    } else {
+      await controller.animateCamera(CameraUpdate.tiltTo(0));
+      await controller.animateCamera(CameraUpdate.bearingTo(0));
+    }
+  }
+
+  /// Enables/disables Mapterhorn 3D terrain in the style and pitches the camera.
   Future<void> _toggle3d() async {
     final controller = _controller;
     if (controller == null || _isToggling3d) return;
@@ -37,16 +81,28 @@ class _OsmMapPageState extends State<OsmMapPage> {
 
     try {
       if (enable3d) {
-        await controller.animateCamera(CameraUpdate.tiltTo(_camera3d.tilt));
-        await controller.animateCamera(
-          CameraUpdate.bearingTo(_camera3d.bearing),
-        );
+        await _applyTerrainStyle(true);
+        await _animate3dCamera(enable3d: true);
       } else {
-        await controller.animateCamera(CameraUpdate.tiltTo(0));
-        await controller.animateCamera(CameraUpdate.bearingTo(0));
+        await _animate3dCamera(enable3d: false);
+        await _applyTerrainStyle(false);
       }
       if (mounted) {
         setState(() => _is3d = enable3d);
+      }
+    } on TimeoutException {
+      developer.log(
+        'Timed out loading map style',
+        name: 'mc_flutter.map',
+        level: 1000,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Map style took too long to load. Try again.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
       }
     } on Object catch (error, stackTrace) {
       developer.log(
@@ -65,6 +121,7 @@ class _OsmMapPageState extends State<OsmMapPage> {
         );
       }
     } finally {
+      _styleLoadCompleter = null;
       if (mounted) {
         setState(() => _isToggling3d = false);
       }
@@ -82,6 +139,7 @@ class _OsmMapPageState extends State<OsmMapPage> {
             styleString: mapStyleString,
             initialCameraPosition: _initialCamera,
             onMapCreated: (controller) => _controller = controller,
+            onStyleLoadedCallback: _onStyleLoaded,
             trackCameraPosition: true,
             compassEnabled: true,
             compassViewPosition: CompassViewPosition.topRight,
