@@ -2,6 +2,10 @@
 
 Flutter **web** app with a full-screen [MapLibre](https://maplibre.org/) map: OpenStreetMap raster tiles plus DEM hillshading.
 
+**Live map:** https://gabriel-briffe.github.io/MC-flutter/
+
+All source and config live on the **`main`** branch. Pushes to `main` automatically build and deploy the site via [GitHub Actions](.github/workflows/deploy-pages.yml).
+
 ## Stack
 
 - [Flutter](https://flutter.dev/) (web)
@@ -38,6 +42,10 @@ flutter build web
 ```
 
 Serve `build/web` with any static host.
+
+### GitHub Pages (automatic)
+
+On the first deploy, enable Pages once in the repo: **Settings → Pages → Build and deployment → Source: GitHub Actions**. After that, every push to `main` updates https://gabriel-briffe.github.io/MC-flutter/.
 
 ## Map style
 
