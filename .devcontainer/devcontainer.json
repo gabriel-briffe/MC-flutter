@@ -1,0 +1,36 @@
+{
+  "name": "Flutter Web (MC-flutter)",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dart-code.dart-code",
+        "dart-code.flutter"
+      ],
+      "settings": {
+        "dart.flutterSdkPath": "/usr/local/flutter",
+        "dart.previewFlutterUiGuides": true,
+        "editor.formatOnSave": true,
+        "[dart]": {
+          "editor.defaultFormatter": "dart-code.dart-code",
+          "editor.formatOnSave": true
+        }
+      }
+    },
+    "codespaces": {
+      "openFiles": ["lib/main.dart", "README.md"]
+    }
+  },
+  "forwardPorts": [8080],
+  "portsAttributes": {
+    "8080": {
+      "label": "Flutter web app",
+      "onAutoForward": "openBrowser"
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "remoteUser": "root"
+}
