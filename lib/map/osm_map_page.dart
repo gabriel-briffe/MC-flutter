@@ -7,6 +7,7 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 import '../widgets/attribution_badge.dart';
 import '../widgets/three_d_toggle.dart';
 import 'map_style.dart';
+import 'user_location_layer.dart';
 
 /// Full-screen MapLibre map with OSM tiles and Mapterhorn relief.
 class OsmMapPage extends StatefulWidget {
@@ -31,11 +32,34 @@ class _OsmMapPageState extends State<OsmMapPage> {
   Completer<void>? _styleLoadCompleter;
   int _styleLoadGeneration = 0;
 
+  late final UserLocationLayer _userLocation = UserLocationLayer(
+    onPermissionDenied: _onLocationPermissionDenied,
+  );
+
   void _onStyleLoaded() {
     final completer = _styleLoadCompleter;
     if (completer != null && !completer.isCompleted) {
       completer.complete();
     }
+    unawaited(_userLocation.onStyleLoaded());
+  }
+
+  void _onLocationPermissionDenied() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Location access is needed to show your position on the map.',
+        ),
+        duration: Duration(seconds: 4),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _userLocation.dispose();
+    super.dispose();
   }
 
   /// Updates terrain exaggeration (0 = flat 2D, 1 = 3D mesh) via style reload.
@@ -117,7 +141,10 @@ class _OsmMapPageState extends State<OsmMapPage> {
           MapLibreMap(
             styleString: mapStyleString,
             initialCameraPosition: _initialCamera,
-            onMapCreated: (controller) => _controller = controller,
+            onMapCreated: (controller) {
+              _controller = controller;
+              _userLocation.attach(controller);
+            },
             onStyleLoadedCallback: _onStyleLoaded,
             trackCameraPosition: true,
             compassEnabled: true,
