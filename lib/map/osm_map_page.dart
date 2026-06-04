@@ -44,6 +44,10 @@ class _OsmMapPageState extends State<OsmMapPage> {
   void initState() {
     super.initState();
     _userLocation.addListener(_onUserLocationChanged);
+    // Do not wait for map style — geolocation is independent of the map.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_userLocation.start());
+    });
   }
 
   void _onUserLocationChanged() {
@@ -86,7 +90,6 @@ class _OsmMapPageState extends State<OsmMapPage> {
     if (completer != null && !completer.isCompleted) {
       completer.complete();
     }
-    unawaited(_userLocation.start());
     unawaited(_updateMarkerScreenPoint());
   }
 
