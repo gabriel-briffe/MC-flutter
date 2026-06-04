@@ -60,13 +60,16 @@ The map uses:
 
 Initial view is centered on the Swiss Alps so terrain is easy to see. Pan and zoom with the mouse; use Ctrl+drag (or two-finger drag) to tilt if your browser sends those gestures to the map.
 
+**Your location:** On load, the app asks for location permission (browser prompt on web). A blue dot shows your position; a short needle points in your direction of travel when the device reports heading (typically while moving). GitHub Pages must be served over HTTPS for geolocation to work.
+
 ## Project layout
 
 ```
 lib/main.dart              # Entry point
 lib/app.dart               # MaterialApp + theme
-lib/map/osm_map_page.dart  # Map screen + 3D toggle
-lib/map/map_style.dart     # Inline MapLibre style JSON
+lib/map/osm_map_page.dart       # Map screen + 3D toggle
+lib/map/map_style.dart          # Inline MapLibre style JSON
+lib/map/user_location_layer.dart # GPS dot + bearing needle
 lib/widgets/               # Attribution, 3D toggle
 assets/map_style.json      # Reference copy of style (not used on web)
 web/index.html             # MapLibre GL JS script tags for web
