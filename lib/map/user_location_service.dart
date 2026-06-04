@@ -5,6 +5,13 @@ import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 
 /// Tracks device location and bearing for map overlays.
+///
+/// Permission flow follows the official geolocator example:
+/// https://github.com/Baseflow/flutter-geolocator/tree/main/geolocator#example
+///
+/// On web, [Geolocator.checkPermission] is skipped because the Permissions API
+/// may hang or return [LocationPermission.denied] even when GPS works; the
+/// package docs say [getCurrentPosition] should be used instead.
 class UserLocationService extends ChangeNotifier {
   UserLocationService({this.onPermissionDenied});
 
@@ -12,8 +19,6 @@ class UserLocationService extends ChangeNotifier {
 
   static const _logName = 'mc_flutter.location';
   static const _minSpeedForHeading = 0.5;
-  static const _permissionTimeout = Duration(seconds: 3);
-  static const _fixTimeout = Duration(seconds: 30);
 
   Position? _position;
   double _bearing = 0;
@@ -30,102 +35,46 @@ class UserLocationService extends ChangeNotifier {
   /// Human-readable status for debugging (permission, errors, etc.).
   String get status => _status;
 
-  LocationSettings get _locationSettings => kIsWeb
-      ? WebSettings(
-          accuracy: LocationAccuracy.best,
-          distanceFilter: 2,
-          timeLimit: _fixTimeout,
-          maximumAge: const Duration(seconds: 30),
-        )
-      : const LocationSettings(
-          accuracy: LocationAccuracy.best,
-          distanceFilter: 2,
-          timeLimit: _fixTimeout,
-        );
+  LocationSettings get _locationSettings {
+    if (kIsWeb) {
+      return WebSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 2,
+        maximumAge: const Duration(minutes: 5),
+      );
+    }
+    return const LocationSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 2,
+    );
+  }
 
-  /// Begins permission checks, an immediate fix, then a position stream.
+  /// Begins permission checks (non-web), an immediate fix, then a stream.
   Future<void> start() async {
     if (_started) return;
     _started = true;
 
-    _status = 'Initializing…';
-    notifyListeners();
-
-    if (!kIsWeb) {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        _status = 'Location services disabled';
-        developer.log(_status, name: _logName, level: 900);
-        _notifyPermissionDenied();
-        notifyListeners();
-        return;
-      }
-    }
-
-    final permission = await _resolvePermission();
-    if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever) {
-      _status = 'Permission denied';
-      developer.log(_status, name: _logName, level: 900);
-      _notifyPermissionDenied();
-      notifyListeners();
-      return;
-    }
-
-    await _beginLocationUpdates();
-  }
-
-  /// Web [Permissions API] can hang; [unableToDetermine] should still prompt via GPS.
-  Future<LocationPermission> _resolvePermission() async {
-    _status = 'Checking permission…';
-    notifyListeners();
-
-    LocationPermission permission;
     try {
-      permission = await Geolocator.checkPermission().timeout(
-        _permissionTimeout,
-      );
-    } on TimeoutException {
+      await _determinePositionAndTrack();
+    } on PermissionDeniedException catch (error) {
+      _status = 'Permission denied';
       developer.log(
-        'checkPermission timed out; continuing (web Permissions API)',
+        'Permission denied',
         name: _logName,
         level: 900,
+        error: error,
       );
-      permission = LocationPermission.unableToDetermine;
-    }
-
-    if (permission == LocationPermission.denied) {
-      _status = 'Requesting permission…';
+      _notifyPermissionDenied();
       notifyListeners();
-      try {
-        permission = await Geolocator.requestPermission().timeout(_fixTimeout);
-      } on TimeoutException {
-        permission = LocationPermission.denied;
-      }
-    }
-
-    return permission;
-  }
-
-  Future<void> _beginLocationUpdates() async {
-    _status = 'Acquiring location…';
-    notifyListeners();
-
-    final settings = _locationSettings;
-
-    try {
-      final initial = await Geolocator.getCurrentPosition(
-        locationSettings: settings,
-      );
-      _applyPosition(initial);
-    } on TimeoutException {
-      _status = 'Location timed out ($_fixTimeout)';
+    } on LocationServiceDisabledException {
+      _status = 'Location services disabled';
       developer.log(_status, name: _logName, level: 900);
+      _notifyPermissionDenied();
       notifyListeners();
     } on Object catch (error, stackTrace) {
       _status = 'Location error: $error';
       developer.log(
-        'getCurrentPosition failed',
+        'Location failed',
         name: _logName,
         level: 1000,
         error: error,
@@ -133,6 +82,50 @@ class UserLocationService extends ChangeNotifier {
       );
       notifyListeners();
     }
+  }
+
+  /// Official geolocator pattern: services → permission → current position.
+  Future<void> _determinePositionAndTrack() async {
+    _status = 'Initializing…';
+    notifyListeners();
+
+    if (!kIsWeb) {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        throw const LocationServiceDisabledException();
+      }
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        _status = 'Requesting permission…';
+        notifyListeners();
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          throw const PermissionDeniedException(
+            'Location permissions are denied',
+          );
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        throw const PermissionDeniedException(
+          'Location permissions are permanently denied',
+        );
+      }
+    } else {
+      // Web: skip checkPermission — see geolocator README "Permissions" section.
+      _status = 'Requesting location (browser prompt)…';
+      notifyListeners();
+    }
+
+    _status = 'Acquiring location…';
+    notifyListeners();
+
+    final settings = _locationSettings;
+    final initial = await Geolocator.getCurrentPosition(
+      locationSettings: settings,
+    );
+    _applyPosition(initial);
 
     await _positionSub?.cancel();
     _positionSub = Geolocator.getPositionStream(locationSettings: settings)
