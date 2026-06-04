@@ -8,6 +8,22 @@ Flutter **web** app with a full-screen [MapLibre](https://maplibre.org/) map: Op
 - [maplibre_gl](https://pub.dev/packages/maplibre_gl) — MapLibre GL JS on web
 - Custom style in `assets/map_style.json` (OSM + terrain hillshade)
 
+## GitHub Codespaces (recommended)
+
+This repo includes a [Dev Container](https://containers.dev/) under `.devcontainer/`.
+
+1. Open the repo on GitHub → **Code** → **Codespaces** → **Create codespace on main**.
+2. Wait for the container to build (Flutter SDK + web tooling are installed automatically).
+3. In the terminal:
+
+```bash
+flutter run -d web-server --web-hostname=0.0.0.0 --web-port=8080
+```
+
+4. When prompted, open the forwarded **port 8080** in your browser (or use the **Ports** tab).
+
+You can also press **F5** (launch config **Flutter Web (Codespace)**) or run the default build task **Flutter: Run web (Codespace)** from the Command Palette.
+
 ## Run locally
 
 ```bash
