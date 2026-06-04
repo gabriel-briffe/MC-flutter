@@ -1,6 +1,6 @@
 {
   "version": 8,
-  "name": "OSM raster",
+  "name": "OSM + Mapterhorn",
   "sources": {
     "osm": {
       "type": "raster",
@@ -8,6 +8,10 @@
       "tileSize": 256,
       "maxzoom": 19,
       "attribution": "&copy; OpenStreetMap contributors"
+    },
+    "mapterhorn-dem": {
+      "type": "raster-dem",
+      "url": "https://tiles.mapterhorn.com/tilejson.json"
     }
   },
   "layers": [
@@ -15,6 +19,14 @@
       "id": "osm-raster",
       "type": "raster",
       "source": "osm"
+    },
+    {
+      "id": "hills",
+      "type": "hillshade",
+      "source": "mapterhorn-dem",
+      "paint": {
+        "hillshade-shadow-color": "#473B24"
+      }
     }
   ]
 }

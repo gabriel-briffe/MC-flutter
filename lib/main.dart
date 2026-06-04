@@ -20,29 +20,97 @@ class McFlutterApp extends StatelessWidget {
   }
 }
 
-/// Full-screen MapLibre map with OpenStreetMap raster tiles.
-class OsmMapPage extends StatelessWidget {
+/// Full-screen MapLibre map: OSM + Mapterhorn hillshade, optional 3D terrain.
+class OsmMapPage extends StatefulWidget {
   const OsmMapPage({super.key});
 
+  @override
+  State<OsmMapPage> createState() => _OsmMapPageState();
+}
+
+class _OsmMapPageState extends State<OsmMapPage> {
   static const _initialCamera = CameraPosition(
     target: LatLng(46.82, 8.23),
     zoom: 9,
   );
 
+  static const _camera3d = (
+    tilt: 60.0,
+    bearing: -18.6,
+  );
+
+  MapLibreMapController? _controller;
+  bool _is3d = false;
+  bool _isToggling3d = false;
+
+  Future<void> _toggle3d() async {
+    final controller = _controller;
+    if (controller == null || _isToggling3d) return;
+
+    setState(() => _isToggling3d = true);
+
+    final enable3d = !_is3d;
+    final camera = await controller.queryCameraPosition();
+
+    try {
+      await controller.setStyle(buildMapStyle(terrain3d: enable3d));
+
+      if (camera != null) {
+        await controller.animateCamera(
+          CameraUpdate.newCameraPosition(
+            CameraPosition(
+              target: camera.target,
+              zoom: camera.zoom,
+              bearing: enable3d ? _camera3d.bearing : 0,
+              tilt: enable3d ? _camera3d.tilt : 0,
+            ),
+          ),
+        );
+      } else if (enable3d) {
+        await controller.animateCamera(
+          CameraUpdate.tiltTo(_camera3d.tilt),
+        );
+      } else {
+        await controller.animateCamera(CameraUpdate.tiltTo(0));
+      }
+
+      if (mounted) {
+        setState(() => _is3d = enable3d);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isToggling3d = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final topInset = MediaQuery.paddingOf(context).top;
+
     return Scaffold(
       body: Stack(
         children: [
           MapLibreMap(
             styleString: mapStyleString,
             initialCameraPosition: _initialCamera,
+            onMapCreated: (controller) => _controller = controller,
             compassEnabled: true,
+            compassViewPosition: CompassViewPosition.topRight,
             rotateGesturesEnabled: true,
             scrollGesturesEnabled: true,
             zoomGesturesEnabled: true,
             tiltGesturesEnabled: true,
             attributionButtonPosition: AttributionButtonPosition.bottomLeft,
+          ),
+          Positioned(
+            top: topInset + 52,
+            right: 12,
+            child: _ThreeDToggle(
+              active: _is3d,
+              busy: _isToggling3d,
+              onPressed: _toggle3d,
+            ),
           ),
           const SafeArea(
             child: Padding(
@@ -51,6 +119,55 @@ class OsmMapPage extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Toggle control placed just below the map compass (top-right).
+class _ThreeDToggle extends StatelessWidget {
+  const _ThreeDToggle({
+    required this.active,
+    required this.busy,
+    required this.onPressed,
+  });
+
+  final bool active;
+  final bool busy;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      elevation: 2,
+      borderRadius: BorderRadius.circular(4),
+      color: active ? const Color(0xFF2D3748) : Colors.white,
+      child: InkWell(
+        onTap: busy ? null : onPressed,
+        borderRadius: BorderRadius.circular(4),
+        child: SizedBox(
+          width: 36,
+          height: 36,
+          child: Center(
+            child: busy
+                ? SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: active ? Colors.white : const Color(0xFF2D3748),
+                    ),
+                  )
+                : Text(
+                    '3D',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: active ? Colors.white : const Color(0xFF2D3748),
+                    ),
+                  ),
+          ),
+        ),
       ),
     );
   }
@@ -75,7 +192,7 @@ class _AttributionBadge extends StatelessWidget {
       child: const Padding(
         padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         child: Text(
-          '© OpenStreetMap contributors',
+          '© OpenStreetMap · © Mapterhorn',
           style: TextStyle(fontSize: 11, color: Color(0xFF333333)),
         ),
       ),
