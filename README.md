@@ -60,7 +60,7 @@ The map uses:
 
 Initial view is centered on the Swiss Alps so terrain is easy to see. Pan and zoom with the mouse; use Ctrl+drag (or two-finger drag) to tilt if your browser sends those gestures to the map.
 
-**Your location:** On load, the app asks for location permission (browser prompt on web). A blue dot shows your position; a short needle points in your direction of travel when the device reports heading (typically while moving). GitHub Pages must be served over HTTPS for geolocation to work.
+**Your location:** On load, the app asks for location permission (browser prompt on web). A single blue arrowhead marks your position and points in your direction of travel when heading is available (typically while moving). GitHub Pages must be served over HTTPS for geolocation to work.
 
 ## Project layout
 

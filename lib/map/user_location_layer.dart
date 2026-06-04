@@ -1,33 +1,29 @@
 import 'dart:async';
 import 'dart:developer' as developer;
-import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
-/// Draws the device position on the map and a bearing needle when heading is known.
+/// Single arrowhead marker for device position and bearing.
 class UserLocationLayer {
   UserLocationLayer({this.onPermissionDenied});
 
   /// Called when the user denies location access or it is blocked.
-  final VoidCallback? onPermissionDenied;
+  final void Function()? onPermissionDenied;
 
   static const _logName = 'mc_flutter.location';
+  static const _arrowImageId = 'user-location-arrow';
 
   /// Minimum speed (m/s) before trusting GPS course as bearing.
   static const _minSpeedForHeading = 0.5;
-
-  /// Needle length in meters on the ground.
-  static const _needleMeters = 22.0;
 
   MapLibreMapController? _controller;
   StreamSubscription<Position>? _positionSub;
   Position? _lastPosition;
   double? _lastBearing;
 
-  Circle? _dot;
-  Line? _bearingNeedle;
+  Symbol? _arrow;
 
   bool _started = false;
   bool _permissionDeniedNotified = false;
@@ -36,20 +32,32 @@ class UserLocationLayer {
     _controller = controller;
   }
 
-  /// Re-applies markers after a style reload and starts tracking on first load.
+  /// Re-applies the marker after a style reload and starts tracking on first load.
   Future<void> onStyleLoaded() async {
     final controller = _controller;
     if (controller == null) return;
 
-    await _clearMarkers();
+    await _clearMarker();
+    await _registerArrowImage();
 
     if (_lastPosition != null) {
-      await _syncMarkers(_lastPosition!, _lastBearing);
+      await _syncMarker(_lastPosition!, _lastBearing ?? 0);
     }
 
     if (!_started) {
       await _startTracking();
     }
+  }
+
+  Future<void> _registerArrowImage() async {
+    final controller = _controller;
+    if (controller == null) return;
+
+    final data = await rootBundle.load('assets/user_location_arrow.png');
+    await controller.addImage(
+      _arrowImageId,
+      data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
+    );
   }
 
   Future<void> _startTracking() async {
@@ -110,7 +118,7 @@ class UserLocationLayer {
     final controller = _controller;
     if (controller == null) return;
 
-    unawaited(_syncMarkers(position, _lastBearing));
+    unawaited(_syncMarker(position, _lastBearing ?? 0));
   }
 
   /// Uses GPS course when moving; keeps the last bearing when stationary.
@@ -121,66 +129,38 @@ class UserLocationLayer {
     return _lastBearing;
   }
 
-  Future<void> _syncMarkers(Position position, double? bearing) async {
+  Future<void> _syncMarker(Position position, double bearing) async {
     final controller = _controller;
     if (controller == null) return;
 
     final latLng = LatLng(position.latitude, position.longitude);
 
-    if (_dot == null) {
-      _dot = await controller.addCircle(
-        CircleOptions(
+    if (_arrow == null) {
+      _arrow = await controller.addSymbol(
+        SymbolOptions(
           geometry: latLng,
-          circleRadius: 8,
-          circleColor: '#1E88E5',
-          circleOpacity: 1,
-          circleStrokeWidth: 2.5,
-          circleStrokeColor: '#FFFFFF',
-          circleStrokeOpacity: 1,
+          iconImage: _arrowImageId,
+          iconSize: 1.25,
+          iconRotate: bearing,
+          iconAnchor: 'center',
+          iconOpacity: 1,
         ),
       );
     } else {
-      await controller.updateCircle(_dot!, CircleOptions(geometry: latLng));
-    }
-
-    if (bearing == null) {
-      if (_bearingNeedle != null) {
-        await controller.removeLine(_bearingNeedle!);
-        _bearingNeedle = null;
-      }
-      return;
-    }
-
-    final tip = _destination(latLng, bearing, _needleMeters);
-    if (_bearingNeedle == null) {
-      _bearingNeedle = await controller.addLine(
-        LineOptions(
-          geometry: [latLng, tip],
-          lineColor: '#1565C0',
-          lineWidth: 3.5,
-          lineOpacity: 0.95,
-          lineJoin: 'round',
-        ),
-      );
-    } else {
-      await controller.updateLine(
-        _bearingNeedle!,
-        LineOptions(geometry: [latLng, tip]),
+      await controller.updateSymbol(
+        _arrow!,
+        SymbolOptions(geometry: latLng, iconRotate: bearing),
       );
     }
   }
 
-  Future<void> _clearMarkers() async {
+  Future<void> _clearMarker() async {
     final controller = _controller;
     if (controller == null) return;
 
-    if (_dot != null) {
-      await controller.removeCircle(_dot!);
-      _dot = null;
-    }
-    if (_bearingNeedle != null) {
-      await controller.removeLine(_bearingNeedle!);
-      _bearingNeedle = null;
+    if (_arrow != null) {
+      await controller.removeSymbol(_arrow!);
+      _arrow = null;
     }
   }
 
@@ -195,34 +175,8 @@ class UserLocationLayer {
     _positionSub = null;
     final controller = _controller;
     if (controller != null) {
-      unawaited(_clearMarkers());
+      unawaited(_clearMarker());
     }
     _controller = null;
-  }
-
-  /// Point [distanceMeters] from [from] along [bearingDeg] (degrees, clockwise from north).
-  static LatLng _destination(
-    LatLng from,
-    double bearingDeg,
-    double distanceMeters,
-  ) {
-    const earthRadius = 6378137.0;
-    final bearing = bearingDeg * math.pi / 180;
-    final lat1 = from.latitude * math.pi / 180;
-    final lng1 = from.longitude * math.pi / 180;
-    final angular = distanceMeters / earthRadius;
-
-    final lat2 = math.asin(
-      math.sin(lat1) * math.cos(angular) +
-          math.cos(lat1) * math.sin(angular) * math.cos(bearing),
-    );
-    final lng2 =
-        lng1 +
-        math.atan2(
-          math.sin(bearing) * math.sin(angular) * math.cos(lat1),
-          math.cos(angular) - math.sin(lat1) * math.sin(lat2),
-        );
-
-    return LatLng(lat2 * 180 / math.pi, lng2 * 180 / math.pi);
   }
 }
