@@ -22,8 +22,6 @@ class _OsmMapPageState extends State<OsmMapPage> {
     zoom: 10,
   );
 
-  static const _camera3d = (tilt: 60.0, bearing: -18.6);
-
   static const _styleLoadTimeout = Duration(seconds: 30);
 
   MapLibreMapController? _controller;
@@ -40,7 +38,7 @@ class _OsmMapPageState extends State<OsmMapPage> {
     }
   }
 
-  /// Swaps the MapLibre style to include or omit 3D terrain.
+  /// Updates terrain exaggeration (0 = flat 2D, 1 = 3D mesh) via style reload.
   Future<void> _applyTerrainStyle(bool terrain3d) async {
     final controller = _controller;
     if (controller == null) return;
@@ -58,20 +56,7 @@ class _OsmMapPageState extends State<OsmMapPage> {
     }
   }
 
-  Future<void> _animate3dCamera({required bool enable3d}) async {
-    final controller = _controller;
-    if (controller == null) return;
-
-    if (enable3d) {
-      await controller.animateCamera(CameraUpdate.tiltTo(_camera3d.tilt));
-      await controller.animateCamera(CameraUpdate.bearingTo(_camera3d.bearing));
-    } else {
-      await controller.animateCamera(CameraUpdate.tiltTo(0));
-      await controller.animateCamera(CameraUpdate.bearingTo(0));
-    }
-  }
-
-  /// Enables/disables Mapterhorn 3D terrain in the style and pitches the camera.
+  /// Toggles 3D terrain mesh only (no camera movement).
   Future<void> _toggle3d() async {
     final controller = _controller;
     if (controller == null || _isToggling3d) return;
@@ -80,13 +65,7 @@ class _OsmMapPageState extends State<OsmMapPage> {
     final enable3d = !_is3d;
 
     try {
-      if (enable3d) {
-        await _applyTerrainStyle(true);
-        await _animate3dCamera(enable3d: true);
-      } else {
-        await _animate3dCamera(enable3d: false);
-        await _applyTerrainStyle(false);
-      }
+      await _applyTerrainStyle(enable3d);
       if (mounted) {
         setState(() => _is3d = enable3d);
       }
@@ -115,7 +94,7 @@ class _OsmMapPageState extends State<OsmMapPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Could not switch 3D view. Try zooming in closer.'),
+            content: Text('Could not switch 3D terrain. Try again.'),
             duration: Duration(seconds: 3),
           ),
         );

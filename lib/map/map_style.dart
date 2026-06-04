@@ -7,19 +7,13 @@ const String mapterhornTileJsonUrl =
 
 /// Builds inline MapLibre style JSON (required on Flutter web / GitHub Pages).
 ///
-/// When [terrain3d] is false, only OSM and hillshade are included. When true,
-/// adds `terrain` and `sky` for extruded 3D relief from Mapterhorn.
+/// 3D relief is controlled via [terrain3d]: the `terrain` block is always
+/// present so MapLibre can update it on style reload. Use `exaggeration: 0`
+/// for 2D (no mesh); use `1` plus `sky` for 3D. Omitting `terrain` entirely
+/// often leaves the previous 3D mesh active after `setStyle`.
 String buildMapStyle({required bool terrain3d}) {
-  final terrainBlock = terrain3d
-      ? '''
-  "terrain": {
-    "source": "mapterhorn-dem",
-    "exaggeration": 1
-  },
-  "sky": {}'''
-      : '';
-
-  final terrainComma = terrain3d ? ',' : '';
+  final exaggeration = terrain3d ? 1 : 0;
+  final skyBlock = terrain3d ? ',\n  "sky": {}' : '';
 
   return '''
 {
@@ -52,11 +46,14 @@ String buildMapStyle({required bool terrain3d}) {
         "hillshade-shadow-color": "#473B24"
       }
     }
-  ]$terrainComma
-  $terrainBlock
+  ],
+  "terrain": {
+    "source": "mapterhorn-dem",
+    "exaggeration": $exaggeration
+  }$skyBlock
 }
 ''';
 }
 
-/// Default 2D style: OSM + hillshade, no 3D terrain mesh.
+/// Default 2D: hillshade on, terrain mesh flattened (`exaggeration: 0`).
 String get mapStyleString => buildMapStyle(terrain3d: false);

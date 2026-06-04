@@ -16,9 +16,9 @@ For this repo specifically:
 
 - **Web / MapLibre:** Use inline MapLibre style JSON on web, not `assets/…`
   paths for `styleString`.
-- **3D terrain:** Start with 2D style (hillshade only). Toggle 3D by reloading
-  inline style with `terrain` + `sky`, wait for `onStyleLoadedCallback`, then
-  pitch the camera. Do not use `queryCameraPosition` on web.
+- **3D terrain:** Keep `terrain` in the style always; toggle `exaggeration`
+  between `0` (2D) and `1` (+ `sky` for 3D). Do not omit `terrain` on reload
+  (MapLibre may keep the old mesh). No camera animation on toggle.
 - **Navigation:** Single-screen map app — built-in `Navigator` / `MaterialApp`
   home is sufficient; do not add `go_router` unless routing grows.
 - **State:** Local `StatefulWidget` state is appropriate; no extra state
