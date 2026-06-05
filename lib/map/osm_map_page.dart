@@ -5,8 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
 import '../menu/map_menu_page.dart';
-import '../widgets/attribution_badge.dart';
-import '../widgets/location_debug_bar.dart';
 import '../widgets/map_menu_button.dart';
 import '../widgets/user_location_marker.dart';
 import 'map_style.dart';
@@ -199,7 +197,6 @@ class _OsmMapPageState extends State<OsmMapPage> {
   @override
   Widget build(BuildContext context) {
     final mapBearing = _controller?.cameraPosition?.bearing ?? 0;
-    const debugBarEstimate = 72.0;
 
     return Scaffold(
       body: Stack(
@@ -219,33 +216,19 @@ class _OsmMapPageState extends State<OsmMapPage> {
             scrollGesturesEnabled: true,
             zoomGesturesEnabled: true,
             tiltGesturesEnabled: _is3d,
-            attributionButtonPosition: AttributionButtonPosition.bottomLeft,
+            attributionButtonPosition: null,
           ),
           UserLocationMarker(
             screenPoint: _markerScreenPoint,
             bearingDegrees: _userLocation.bearing,
             mapBearingDegrees: mapBearing,
           ),
-          const SafeArea(
-            child: Padding(
-              padding: EdgeInsets.all(8),
-              child: AttributionBadge(),
-            ),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: LocationDebugBar(
-              status: _userLocation.status,
-              position: _userLocation.position,
-              screenPoint: _markerScreenPoint,
-            ),
-          ),
           Positioned(
             right: 16,
-            bottom: debugBarEstimate + 16,
-            child: MapMenuButton(onPressed: () => unawaited(_openMenu())),
+            bottom: 16,
+            child: SafeArea(
+              child: MapMenuButton(onPressed: () => unawaited(_openMenu())),
+            ),
           ),
         ],
       ),

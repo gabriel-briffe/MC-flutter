@@ -60,7 +60,7 @@ The map uses:
 
 Initial view is centered on the Swiss Alps so terrain is easy to see. Pan and zoom with the mouse. Open the **menu** (bottom-right) to switch between **2D** (flat, no tilt) and **3D** terrain; in 3D you can tilt with Ctrl+drag or two-finger drag.
 
-**Your location:** On load, the app asks for location permission (browser prompt on web). A blue SVG arrowhead overlay marks your position and rotates with bearing when available (typically while moving). A debug bar at the bottom shows live coordinates. GitHub Pages must be served over HTTPS for geolocation to work.
+**Your location:** On load, the app asks for location permission (browser prompt on web). A blue SVG arrowhead overlay marks your position and rotates with bearing when available (typically while moving). GitHub Pages must be served over HTTPS for geolocation to work.
 
 ## Project layout
 
@@ -72,8 +72,7 @@ lib/menu/map_menu_page.dart     # 2D/3D terrain settings
 lib/map/map_style.dart          # Inline MapLibre style JSON
 lib/map/user_location_service.dart  # Geolocator + bearing
 lib/widgets/user_location_marker.dart # SVG arrow overlay
-lib/widgets/location_debug_bar.dart   # Coordinate debug UI
-lib/widgets/               # Attribution, menu button, location UI
+lib/widgets/               # Menu button, location UI
 assets/map_style.json      # Reference copy of style (not used on web)
 web/index.html             # MapLibre GL JS script tags for web
 docs/rules/rules.md        # Flutter AI / Dart guidelines (for Cursor & contributors)
