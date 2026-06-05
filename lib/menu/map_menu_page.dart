@@ -20,8 +20,15 @@ class MapMenuPage extends StatefulWidget {
 }
 
 class _MapMenuPageState extends State<MapMenuPage> {
-  late bool _is3d = widget.is3d;
-  bool _busy = widget.isBusy;
+  late bool _is3d;
+  late bool _busy;
+
+  @override
+  void initState() {
+    super.initState();
+    _is3d = widget.is3d;
+    _busy = widget.isBusy;
+  }
 
   Future<void> _selectMode(bool enable3d) async {
     if (_busy || _is3d == enable3d) return;
