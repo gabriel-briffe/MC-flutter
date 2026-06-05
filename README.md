@@ -58,7 +58,7 @@ The map uses:
 1. **Base layer** — [OpenStreetMap](https://www.openstreetmap.org/) standard raster tiles (`tile.openstreetmap.org`). Follow the [OSM tile usage policy](https://operations.osmfoundation.org/policies/tiles/) for production (attribution, caching, traffic).
 2. **Hillshade** — MapLibre demo terrain DEM (`demotiles.maplibre.org`) for relief shading over the basemap.
 
-Initial view is centered on the Swiss Alps so terrain is easy to see. Pan and zoom with the mouse; use Ctrl+drag (or two-finger drag) to tilt if your browser sends those gestures to the map.
+Initial view is centered on the Swiss Alps so terrain is easy to see. Pan and zoom with the mouse. Open the **menu** (bottom-right) to switch between **2D** (flat, no tilt) and **3D** terrain; in 3D you can tilt with Ctrl+drag or two-finger drag.
 
 **Your location:** On load, the app asks for location permission (browser prompt on web). A blue SVG arrowhead overlay marks your position and rotates with bearing when available (typically while moving). A debug bar at the bottom shows live coordinates. GitHub Pages must be served over HTTPS for geolocation to work.
 
@@ -67,12 +67,13 @@ Initial view is centered on the Swiss Alps so terrain is easy to see. Pan and zo
 ```
 lib/main.dart              # Entry point
 lib/app.dart               # MaterialApp + theme
-lib/map/osm_map_page.dart       # Map screen + 3D toggle
+lib/map/osm_map_page.dart       # Map screen + menu navigation
+lib/menu/map_menu_page.dart     # 2D/3D terrain settings
 lib/map/map_style.dart          # Inline MapLibre style JSON
 lib/map/user_location_service.dart  # Geolocator + bearing
 lib/widgets/user_location_marker.dart # SVG arrow overlay
 lib/widgets/location_debug_bar.dart   # Coordinate debug UI
-lib/widgets/               # Attribution, 3D toggle
+lib/widgets/               # Attribution, menu button, location UI
 assets/map_style.json      # Reference copy of style (not used on web)
 web/index.html             # MapLibre GL JS script tags for web
 docs/rules/rules.md        # Flutter AI / Dart guidelines (for Cursor & contributors)

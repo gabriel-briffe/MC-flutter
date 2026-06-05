@@ -4,9 +4,10 @@ import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
+import '../menu/map_menu_page.dart';
 import '../widgets/attribution_badge.dart';
 import '../widgets/location_debug_bar.dart';
-import '../widgets/three_d_toggle.dart';
+import '../widgets/map_menu_button.dart';
 import '../widgets/user_location_marker.dart';
 import 'map_style.dart';
 import 'user_location_service.dart';
@@ -44,7 +45,6 @@ class _OsmMapPageState extends State<OsmMapPage> {
   void initState() {
     super.initState();
     _userLocation.addListener(_onUserLocationChanged);
-    // Do not wait for map style — geolocation is independent of the map.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(_userLocation.start());
     });
@@ -109,6 +109,18 @@ class _OsmMapPageState extends State<OsmMapPage> {
     );
   }
 
+  Future<void> _openMenu() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => MapMenuPage(
+          is3d: _is3d,
+          isBusy: _isToggling3d,
+          onTerrainModeChanged: _setTerrain3d,
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _userLocation.removeListener(_onUserLocationChanged);
@@ -134,13 +146,12 @@ class _OsmMapPageState extends State<OsmMapPage> {
     }
   }
 
-  /// Toggles 3D terrain mesh only (no camera movement).
-  Future<void> _toggle3d() async {
+  /// Switches between 2D (flat) and 3D terrain via style reload (no camera move).
+  Future<void> _setTerrain3d(bool enable3d) async {
     final controller = _controller;
-    if (controller == null || _isToggling3d) return;
+    if (controller == null || _isToggling3d || _is3d == enable3d) return;
 
     setState(() => _isToggling3d = true);
-    final enable3d = !_is3d;
 
     try {
       await _applyTerrainStyle(enable3d);
@@ -163,7 +174,7 @@ class _OsmMapPageState extends State<OsmMapPage> {
       }
     } on Object catch (error, stackTrace) {
       developer.log(
-        '3D toggle failed',
+        'Terrain mode change failed',
         name: 'mc_flutter.map',
         level: 1000,
         error: error,
@@ -172,7 +183,7 @@ class _OsmMapPageState extends State<OsmMapPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Could not switch 3D terrain. Try again.'),
+            content: Text('Could not switch map mode. Try again.'),
             duration: Duration(seconds: 3),
           ),
         );
@@ -187,8 +198,8 @@ class _OsmMapPageState extends State<OsmMapPage> {
 
   @override
   Widget build(BuildContext context) {
-    final topInset = MediaQuery.paddingOf(context).top;
     final mapBearing = _controller?.cameraPosition?.bearing ?? 0;
+    const debugBarEstimate = 72.0;
 
     return Scaffold(
       body: Stack(
@@ -207,22 +218,13 @@ class _OsmMapPageState extends State<OsmMapPage> {
             rotateGesturesEnabled: true,
             scrollGesturesEnabled: true,
             zoomGesturesEnabled: true,
-            tiltGesturesEnabled: true,
+            tiltGesturesEnabled: _is3d,
             attributionButtonPosition: AttributionButtonPosition.bottomLeft,
           ),
           UserLocationMarker(
             screenPoint: _markerScreenPoint,
             bearingDegrees: _userLocation.bearing,
             mapBearingDegrees: mapBearing,
-          ),
-          Positioned(
-            top: topInset + 52,
-            right: 12,
-            child: ThreeDToggle(
-              active: _is3d,
-              busy: _isToggling3d,
-              onPressed: _toggle3d,
-            ),
           ),
           const SafeArea(
             child: Padding(
@@ -239,6 +241,11 @@ class _OsmMapPageState extends State<OsmMapPage> {
               position: _userLocation.position,
               screenPoint: _markerScreenPoint,
             ),
+          ),
+          Positioned(
+            right: 16,
+            bottom: debugBarEstimate + 16,
+            child: MapMenuButton(onPressed: () => unawaited(_openMenu())),
           ),
         ],
       ),
